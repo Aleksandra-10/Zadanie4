@@ -1,0 +1,114 @@
+import numpy as np
+from tensorflow.keras.utils import to_categorical
+from keras.datasets import mnist
+import matplotlib.pyplot as plt
+import keras
+from sklearn.model_selection import train_test_split
+from keras.models import Sequential,Input,Model
+from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+from keras.layers import BatchNormalization
+from keras.layers.advanced_activations import LeakyReLU
+import tensorflow as tf
+from sklearn.metrics import classification_report
+
+def read_and_convert_mnist():
+    (train_X,train_Y), (test_X,test_Y) = mnist.load_data()
+    train_X = train_X.reshape(-1, 28,28, 1)
+    test_X = test_X.reshape(-1, 28,28, 1)
+
+    train_X = train_X.astype('float32')
+    test_X = test_X.astype('float32')
+    train_X = train_X / 255.
+    test_X = test_X / 255.
+    train_Y_one_hot = to_categorical(train_Y)
+    test_Y_one_hot = to_categorical(test_Y)
+
+    train_X,valid_X,train_label,valid_label = train_test_split(train_X, train_Y_one_hot, test_size=0.2, random_state=13)
+
+    return train_X,valid_X,train_label,valid_label, test_Y_one_hot, test_X, test_Y
+
+def model_full_polling(train_X,valid_X,train_label,valid_label, test_Y_one_hot, test_X, test_Y):
+    batch_size = 64
+    epochs = 10
+    num_classes = 10
+    fashion_model = Sequential()
+    fashion_model.add(Conv2D(32, kernel_size=(5, 5),activation='linear',input_shape=(28,28,1),padding='same'))
+    fashion_model.add(LeakyReLU(alpha=0.1))
+    fashion_model.add(MaxPooling2D((2, 2),padding='same'))
+    fashion_model.add(Flatten())
+    fashion_model.add(Dense(128, activation='relu'))
+    fashion_model.add(LeakyReLU(alpha=0.1))                  
+    fashion_model.add(Dense(num_classes, activation='softmax'))
+    fashion_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=tf.keras.optimizers.Adam(),metrics=['accuracy'])
+    fashion_model.summary()
+    fashion_train = fashion_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
+    test_eval = fashion_model.evaluate(test_X, test_Y_one_hot, verbose=0)
+    print('Test loss:', test_eval[0])
+    print('Test accuracy:', test_eval[1])
+
+    predict_labels(fashion_model, test_X, test_Y)
+
+def model_full(train_X,valid_X,train_label,valid_label, test_Y_one_hot, test_X, test_Y):
+    batch_size = 64
+    epochs = 10
+    num_classes = 10
+    fashion_model = Sequential()
+    fashion_model.add(Conv2D(32, kernel_size=(5, 5),activation='relu',input_shape=(28,28,1),padding='same'))
+    fashion_model.add(LeakyReLU(alpha=0.1))
+    fashion_model.add(Flatten())
+    fashion_model.add(Dense(128, activation='relu'))
+    fashion_model.add(LeakyReLU(alpha=0.1))                  
+    fashion_model.add(Dense(num_classes, activation='softmax'))
+    fashion_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=tf.keras.optimizers.Adam(),metrics=['accuracy'])
+    fashion_model.summary()
+    fashion_train = fashion_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
+    test_eval = fashion_model.evaluate(test_X, test_Y_one_hot, verbose=0)
+    print('Test loss:', test_eval[0])
+    print('Test accuracy:', test_eval[1])
+
+    predict_labels(fashion_model, test_X, test_Y)
+
+def model(train_X,valid_X,train_label,valid_label, test_Y_one_hot, test_X, test_Y):
+    batch_size = 64
+    epochs = 10
+    num_classes = 10
+    fashion_model = Sequential()
+    fashion_model.add(Flatten(input_shape=(28,28)))      
+    fashion_model.add(Dense(128, activation='relu')) 
+    fashion_model.add(Dense(num_classes, activation='softmax'))
+    fashion_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=tf.keras.optimizers.Adam(),metrics=['accuracy'])
+    fashion_model.summary()
+    fashion_train = fashion_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
+    test_eval = fashion_model.evaluate(test_X, test_Y_one_hot, verbose=0)
+    print('Test loss:', test_eval[0])
+    print('Test accuracy:', test_eval[1])
+
+    predict_labels(fashion_model, test_X, test_Y)
+
+def predict_labels(fashion_model, test_X, test_Y):
+    predicted_classes = fashion_model.predict(test_X)
+    predicted_classes = np.argmax(np.round(predicted_classes),axis=1)
+    correct = np.where(predicted_classes==test_Y)[0]
+    print("Found %d correct labels" % len(correct))
+    for i, correct in enumerate(correct[:9]):
+        plt.subplot(3,3,i+1)
+        plt.imshow(test_X[correct].reshape(28,28), cmap='gray', interpolation='none')
+        plt.title("Predicted {}, Class {}".format(predicted_classes[correct], test_Y[correct]))
+        plt.tight_layout()
+    
+    make_report(10, test_Y, predicted_classes)
+
+def make_report(num_classes, test_Y, predicted_classes):
+    target_names = ["Class {}".format(i) for i in range(num_classes)]
+    print(classification_report(test_Y, predicted_classes, target_names=target_names))
+
+if __name__ == '__main__':
+    train_X,valid_X,train_label,valid_label, test_Y_one_hot, test_X, test_Y = read_and_convert_mnist()
+
+    model_full_polling(train_X,valid_X,train_label,valid_label, test_Y_one_hot, test_X, test_Y)
+
+
+
+
+
